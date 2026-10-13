@@ -12,20 +12,59 @@ use crate::type_define::CartItem;
 
 // 別のPCへ送信するデータ形式を定義する
 #[derive(Serialize)]
-pub struct OrderItemMsg {
+struct ItemMsg {
     name: String,
     pieces: u32,
-    sauce: String,
-    aonori: bool,
-    katsuobushi: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sauce: Option<String>,
+    toppings: Vec<String>,
     qty: u32,
     subtotal: u32,
+}
+
+fn to_msg(cart_item : &CartItem) -> ItemMsg {
+    match cart_item {
+        CartItem::Takoyaki { size, sauce, aonori, katsuobushi, qty } => {
+            let mut toppings = vec![];
+            if *aonori {
+                toppings.push("青のり".to_owned());
+            }
+            if *katsuobushi {
+                toppings.push("かつお節".to_owned());
+            }
+            ItemMsg {
+                name: "たこやき".to_owned(),
+                pieces: size.count(),
+                sauce: Some(sauce.label().to_owned()),
+                toppings,
+                qty: *qty,
+                subtotal: cart_item.subtotal(),
+            }
+        }
+        CartItem::Castella { size, choco, honey, qty } => {
+            let mut toppings = vec![];
+            if *choco {
+                toppings.push("チョコソース".to_owned());
+            }
+            if *honey {
+                toppings.push("はちみつ".to_owned());
+            }
+            ItemMsg {
+                name: "ベビーカステラ".to_owned(),
+                pieces: size.count(),
+                sauce: None,
+                toppings,
+                qty: *qty,
+                subtotal: cart_item.subtotal(),
+            }
+        }
+    }
 }
 
 #[derive(Serialize)]
 pub struct OrderMsg {
     order_no: u32,
-    items: Vec<OrderItemMsg>,
+    items: Vec<ItemMsg>,
     total: u32,
 }
 
@@ -35,18 +74,7 @@ impl OrderMsg {
         OrderMsg {
             order_no,
             total: cart.iter().map(|i| i.subtotal()).sum(),
-            items: cart
-                .iter()
-                .map(|i| OrderItemMsg {
-                    name: "たこやき".to_string(),
-                    pieces: i.size.count(),
-                    sauce: i.sauce.label().to_owned(),
-                    aonori: i.aonori,
-                    katsuobushi: i.katsuobushi,
-                    qty: i.qty,
-                    subtotal: i.subtotal(),
-                })
-                .collect(),
+            items: cart.iter().map(|i| to_msg(i)).collect(),
         }
     }
 }

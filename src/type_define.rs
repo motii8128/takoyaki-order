@@ -1,24 +1,21 @@
-const TAKOYAKI_4_VALUE : u32 = 450;
-const TAKOYAKI_8_VALUE : u32 = 800;
+const TAKOYAKI_VALUE : u32 = 250;
+const KASUTERA_VALUE : u32 = 200;
 
 /// たこやきの注文数を選ぶ
 #[derive(Clone, Copy, PartialEq)]
 pub enum Size {
     S4,
-    S8,
 }
 impl Size {
-    pub const ALL: [Size; 2] = [Size::S4, Size::S8];
+    pub const ALL: [Size; 1] = [Size::S4];
     pub fn count(self) -> u32 {
         match self {
             Size::S4 => 4,
-            Size::S8 => 8,
         }
     }
     pub fn price(self) -> u32 {
         match self {
-            Size::S4 => TAKOYAKI_4_VALUE,
-            Size::S8 => TAKOYAKI_8_VALUE,
+            Size::S4 => TAKOYAKI_VALUE,
         }
     }
 }
@@ -43,28 +40,66 @@ impl Sauce {
     }
 }
 
+
+
 // 各注文が入るカート
 #[derive(Clone)]
-pub struct CartItem {
-    pub size: Size,
-    pub sauce: Sauce,
-    pub aonori: bool,
-    pub katsuobushi: bool,
-    pub qty: u32,
+pub enum CartItem {
+    Takoyaki {
+        size: Size,
+        sauce: Sauce,
+        aonori: bool,
+        katsuobushi: bool,
+        qty: u32,
+    },
+    Castella {
+        size: Size,
+        choco: bool,
+        honey: bool,
+        qty: u32,
+    },
 }
 
 impl CartItem {
-    pub fn subtotal(&self) -> u32 {
-        self.size.price() * self.qty
+    fn qty(&self) -> u32 {
+        match self {
+            CartItem::Takoyaki { qty, .. } | CartItem::Castella { qty, .. } => *qty,
+        }
     }
+
+    fn unit_price(&self) -> u32 {
+        match self {
+            CartItem::Takoyaki { .. } => TAKOYAKI_VALUE,
+            CartItem::Castella { .. } => KASUTERA_VALUE,
+        }
+    }
+
+    pub fn subtotal(&self) -> u32 {
+        self.unit_price() * self.qty()
+    }
+
     pub fn describe(&self) -> String {
-        let mut s = format!("たこやき {}個 / {}", self.size.count(), self.sauce.label());
-        if self.aonori {
-            s += " / 青のり";
+        match self {
+            CartItem::Takoyaki { size, sauce, aonori, katsuobushi, .. } => {
+                let mut s = format!("たこやき {}個 / {}", size.count(), sauce.label());
+                if *aonori {
+                    s += " / 青のり";
+                }
+                if *katsuobushi {
+                    s += " / かつお節";
+                }
+                s
+            }
+            CartItem::Castella { size, choco, honey, .. } => {
+                let mut s = format!("ベビーカステラ {}個", size.count());
+                if *choco {
+                    s += " / チョコソース";
+                }
+                if *honey {
+                    s += " / はちみつ";
+                }
+                s
+            }
         }
-        if self.katsuobushi {
-            s += " / かつお節";
-        }
-        s
     }
 }
