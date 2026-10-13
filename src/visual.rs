@@ -3,6 +3,17 @@ use eframe::egui;
 pub fn setup_style(ctx: &egui::Context) {
     use egui::{FontId, TextStyle};
     ctx.style_mut(|style| {
+        let v = &mut style.visuals;
+        *v = egui::Visuals::light(); // ライトテーマ（標準はダーク）
+
+        v.panel_fill = egui::Color32::from_rgb(255, 248, 235); // パネルの背景
+        v.window_fill = egui::Color32::from_rgb(255, 248, 235);
+        v.selection.bg_fill = egui::Color32::from_rgb(230, 120, 20); // ラジオ/チェックの選択色
+        v.widgets.inactive.weak_bg_fill = egui::Color32::from_rgb(240, 225, 200); // ボタンの通常色
+        v.widgets.hovered.weak_bg_fill = egui::Color32::from_rgb(250, 210, 160); // 乗せたとき
+        v.widgets.active.weak_bg_fill = egui::Color32::from_rgb(230, 120, 20); // 押している間
+        v.override_text_color = Some(egui::Color32::from_rgb(60, 40, 20)); // 文字色
+
         style.text_styles = [
             (TextStyle::Heading, FontId::proportional(32.0)),
             (TextStyle::Body, FontId::proportional(22.0)),

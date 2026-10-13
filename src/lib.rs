@@ -112,7 +112,7 @@ impl eframe::App for App {
                             item.subtotal()
                         ));
                     });
-                    if ui.add_enabled(!sending, egui::Button::new("🗑")).clicked() {
+                    if ui.add_enabled(!sending, egui::Button::new("🗑").fill(egui::Color32::from_rgb(255, 0, 0))).clicked() {
                         remove = Some(i);
                     }
                 });
