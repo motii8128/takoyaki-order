@@ -88,6 +88,15 @@ impl App {
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
 
+        if ctx.input(|i| i.key_pressed(egui::Key::F11)) {
+            let is_full = ctx.input(|i| i.viewport().fullscreen.unwrap_or(false));
+            ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(!is_full));
+        }
+        // Esc: 全画面を解除
+        if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
+        }
+
         // 送信結果の受取
         while let Ok(result) = self.rx.try_recv() {
             match result {
