@@ -61,13 +61,13 @@ pub enum CartItem {
 }
 
 impl CartItem {
-    fn qty(&self) -> u32 {
+    pub fn qty(&self) -> u32 {
         match self {
             CartItem::Takoyaki { qty, .. } | CartItem::Castella { qty, .. } => *qty,
         }
     }
 
-    fn unit_price(&self) -> u32 {
+    pub fn unit_price(&self) -> u32 {
         match self {
             CartItem::Takoyaki { .. } => TAKOYAKI_VALUE,
             CartItem::Castella { .. } => KASUTERA_VALUE,

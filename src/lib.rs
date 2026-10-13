@@ -8,6 +8,9 @@ mod tcp_connection;
 // 見た目に関するモジュール
 mod visual;
 
+// UIの機能を抽象化して実装したモジュール
+mod ui_widgets;
+
 use eframe::egui;
 
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -24,12 +27,16 @@ enum Status
 }
 
 pub struct App {
-    // 入力中の商品
-    size: Size,
-    sauce: Sauce,
-    aonori: bool,
-    katsuobushi: bool,
-    qty: u32,
+    t_size: Size,
+    t_sauce: Sauce,
+    t_aonori: bool,
+    t_katsuobushi: bool,
+    t_qty: u32,
+    // ベビーカステラの入力中の内容
+    c_size: Size,
+    c_choco: bool,
+    c_honey: bool,
+    c_qty: u32,
     // カート
     cart: Vec<CartItem>,
     next_no: u32,
@@ -45,11 +52,15 @@ impl App {
         visual::setup_style(&cc.egui_ctx);
         let (tx, rx) = channel();
         Self {
-            size: Size::S8,
-            sauce: Sauce::Sauce,
-            aonori: true,
-            katsuobushi: true,
-            qty: 1,
+            t_size: Size::S4,
+            t_sauce: Sauce::Sauce,
+            t_aonori: true,
+            t_katsuobushi: true,
+            t_qty: 1,
+            c_size: Size::S4,
+            c_choco: false,
+            c_honey: false,
+            c_qty: 1,
             cart: vec![],
             next_no: 1,
             status: Status::None,
@@ -92,32 +103,40 @@ impl eframe::App for App {
 
         let sending = matches!(self.status, Status::Sending);
 
-        // 右: カート
+        ////////////////////////////////////////////////////////////////////////////////// 右: カート
         egui::SidePanel::right("cart").min_width(420.0).show(ctx, |ui| {
-            ui.heading("🛒 ご注文内容");
+            ui.heading("ご注文内容");
             ui.separator();
 
             let mut remove: Option<usize> = None;
             if self.cart.is_empty() {
                 ui.label("まだ商品がありません");
             }
-            for (i, item) in self.cart.iter().enumerate() {
-                ui.horizontal(|ui| {
-                    ui.vertical(|ui| {
-                        ui.label(item.describe());
-                        ui.label(format!(
-                            "{} 円 × {} = {} 円",
-                            item.size.price(),
-                            item.qty,
-                            item.subtotal()
-                        ));
-                    });
-                    if ui.add_enabled(!sending, egui::Button::new("🗑").fill(egui::Color32::from_rgb(255, 0, 0))).clicked() {
-                        remove = Some(i);
+            egui::ScrollArea::vertical()
+                .max_height(ui.available_height() - 200.0)
+                .show(ui, |ui| {
+                    for (i, item) in self.cart.iter().enumerate() {
+                        ui.horizontal(|ui| {
+                            ui.vertical(|ui| {
+                                ui.label(item.describe());
+                                ui.label(format!(
+                                    "{} 円 × {} = {} 円",
+                                    item.unit_price(),
+                                    item.qty(),
+                                    item.subtotal()
+                                ));
+                            });
+                            let trash = egui::Button::new(
+                                egui::RichText::new("🗑").color(egui::Color32::WHITE),
+                            )
+                            .fill(egui::Color32::from_rgb(200, 40, 40));
+                            if ui.add_enabled(!sending, trash).clicked() {
+                                remove = Some(i);
+                            }
+                        });
+                        ui.separator();
                     }
                 });
-                ui.separator();
-            }
             if let Some(i) = remove {
                 self.cart.remove(i);
             }
@@ -141,7 +160,8 @@ impl eframe::App for App {
                 Status::None => {}
                 Status::Sending => {
                     ui.horizontal(|ui| {
-                        ui.spinner();
+                        let sp = egui::widgets::Spinner::new().color(egui::Color32::BLACK);
+                        ui.add(sp);
                         ui.label("送信中...");
                     });
                 }
@@ -158,69 +178,103 @@ impl eframe::App for App {
             }
         });
 
-        // 中央: 注文フォーム
+        ////////////////////////////////////////////////////////////////////////////////// 中央: 注文フォーム
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("🐙 たこやき 注文受付");
-            ui.separator();
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                // ===== たこやき（左上）=====
+                ui.heading("🐙 たこやき");
+                ui.separator();
 
-            ui.label("個数");
-            ui.horizontal(|ui| {
-                for s in Size::ALL {
-                    ui.radio_value(&mut self.size, s, format!("{}個 ({}円)", s.count(), s.price()));
-                }
-            });
-
-            ui.add_space(8.0);
-            ui.label("味");
-            ui.horizontal(|ui| {
-                for s in Sauce::ALL {
-                    ui.radio_value(&mut self.sauce, s, s.label());
-                }
-            });
-
-            ui.add_space(8.0);
-            ui.label("トッピング");
-            ui.horizontal(|ui| {
-                ui.checkbox(&mut self.aonori, "青のり");
-                ui.checkbox(&mut self.katsuobushi, "かつお節");
-            });
-
-            ui.add_space(8.0);
-            ui.horizontal(|ui| {
-                ui.label("数量");
-                if ui
-                    .add_enabled(self.qty > 1, egui::Button::new("−").min_size(egui::vec2(56.0, 56.0)))
-                    .clicked()
-                {
-                    self.qty -= 1;
-                }
-                ui.label(egui::RichText::new(format!("{} 舟", self.qty)).size(30.0));
-                if ui
-                    .add_enabled(self.qty < 20, egui::Button::new("＋").min_size(egui::vec2(56.0, 56.0)))
-                    .clicked()
-                {
-                    self.qty += 1;
-                }
-            });
-
-            ui.add_space(12.0);
-            if ui
-                .add_enabled(
-                    !sending,
-                    egui::Button::new("＋ カートに追加").min_size(egui::vec2(240.0, 56.0)),
-                )
-                .clicked()
-            {
-                self.cart.push(CartItem {
-                    size: self.size,
-                    sauce: self.sauce,
-                    aonori: self.aonori,
-                    katsuobushi: self.katsuobushi,
-                    qty: self.qty,
+                ui.horizontal(|ui| {
+                    ui.label("個数　　　");
+                    ui.add_space(32.0);
+                    for s in Size::ALL {
+                        ui.radio_value(&mut self.t_size, s, format!("{}個 ({}円)", s.count(), s.price()));
+                    }
                 });
-                self.qty = 1;
-                self.status = Status::None;
-            }
+                ui.horizontal(|ui| {
+                    ui.label("味　　　　");
+                    ui.add_space(32.0);
+                    for s in Sauce::ALL {
+                        let text = if s == self.t_sauce
+                        {
+                            egui::RichText::new(s.label()).color(egui::Color32::from_rgb(100, 225, 0))
+                        }
+                        else {
+                            egui::RichText::new(s.label()).color(egui::Color32::BLACK)
+                        };
+                        ui.radio_value(&mut self.t_sauce, s, text);
+                    }
+                });
+                ui.horizontal(|ui| {
+                    ui.label("トッピング");
+                    ui.add_space(32.0);
+                    ui_widgets::toggle_button(ui, &mut self.t_aonori, "青のり");
+                    ui_widgets::toggle_button(ui, &mut self.t_katsuobushi, "かつお節");
+                });
+                ui.horizontal(|ui| {
+                    ui_widgets::qty_stepper(ui, &mut self.t_qty, "個");
+                    ui.add_space(20.0);
+                    if ui
+                        .add_enabled(
+                            !sending,
+                            egui::Button::new("＋ カートに追加").min_size(egui::vec2(240.0, 56.0)),
+                        )
+                        .clicked()
+                    {
+                        self.cart.push(CartItem::Takoyaki {
+                            size: self.t_size,
+                            sauce: self.t_sauce,
+                            aonori: self.t_aonori,
+                            katsuobushi: self.t_katsuobushi,
+                            qty: self.t_qty,
+                        });
+                        self.t_qty = 1;
+                        self.status = Status::None;
+                    }
+                });
+
+                ui.add_space(16.0);
+                ui.separator();
+                ui.add_space(16.0);
+
+                // ===== ベビーカステラ（左下）=====
+                ui.heading("🍰 ベビーカステラ");
+                ui.separator();
+
+                ui.horizontal(|ui| {
+                    ui.label("個数　　　");
+                    ui.add_space(32.0);
+                    for s in Size::ALL {
+                        ui.radio_value(&mut self.c_size, s, format!("{}個 ({}円)", s.count(), s.price()));
+                    }
+                });
+                // ui.horizontal(|ui| {
+                //     ui.label("トッピング");
+                //     ui.checkbox(&mut self.c_choco, "チョコソース");
+                //     ui.checkbox(&mut self.c_honey, "はちみつ");
+                // });
+                ui.horizontal(|ui| {
+                    ui_widgets::qty_stepper(ui, &mut self.c_qty, "個");
+                    ui.add_space(20.0);
+                    if ui
+                        .add_enabled(
+                            !sending,
+                            egui::Button::new("＋ カートに追加").min_size(egui::vec2(240.0, 56.0)),
+                        )
+                        .clicked()
+                    {
+                        self.cart.push(CartItem::Castella {
+                            size: self.c_size,
+                            choco: self.c_choco,
+                            honey: self.c_honey,
+                            qty: self.c_qty,
+                        });
+                        self.c_qty = 1;
+                        self.status = Status::None;
+                    }
+                });
+            });
         });
     }
 }
