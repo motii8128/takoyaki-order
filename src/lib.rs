@@ -58,7 +58,7 @@ impl App {
             t_katsuobushi: true,
             t_qty: 1,
             c_size: Size::S4,
-            c_choco: false,
+            c_choco: true,
             c_honey: false,
             c_qty: 1,
             cart: vec![],
