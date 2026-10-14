@@ -1,9 +1,26 @@
 // このアプリならではの型がそれぞれ定義されている
 mod type_define;
-use type_define::{Size, Sauce, CartItem};
+use type_define::{
+    Size, 
+    Sauce, 
+    CartItem, 
+    OrderMsg,
+    Entry,
+    to_entry,
+    Row,
+};
+
+// UI以外のモジュール
+mod module;
 
 // 注文データをTCP通信で送信するためのモジュール
-mod tcp_connection;
+use module::tcp_connection;
+
+// CSVへの書き込みを実装したモジュール
+use module::csv_utils;
+
+// 通知音を鳴らすためのモジュール
+use module::notification;
 
 // 見た目に関するモジュール
 mod visual;
@@ -15,8 +32,6 @@ use eframe::egui;
 
 use std::sync::mpsc::{channel, Receiver, Sender};
 
-use crate::tcp_connection::OrderMsg;
-
 
 enum Status
 {
@@ -26,7 +41,7 @@ enum Status
     Failed(String)  // 送信失敗
 }
 
-pub struct App {
+pub struct OrderApp {
     t_size: Size,
     t_sauce: Sauce,
     t_aonori: bool,
@@ -46,7 +61,7 @@ pub struct App {
     rx: Receiver<Result<(), String>>,
 }
 
-impl App {
+impl OrderApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         visual::setup_fonts(&cc.egui_ctx);
         visual::setup_style(&cc.egui_ctx);
@@ -85,7 +100,7 @@ impl App {
     }
 }
 
-impl eframe::App for App {
+impl eframe::App for OrderApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
 
         if ctx.input(|i| i.key_pressed(egui::Key::F11)) {
@@ -122,7 +137,7 @@ impl eframe::App for App {
                 ui.label("まだ商品がありません");
             }
             egui::ScrollArea::vertical()
-                .max_height(ui.available_height() - 200.0)
+                .max_height(ui.available_height() - 300.0)
                 .show(ui, |ui| {
                     for (i, item) in self.cart.iter().enumerate() {
                         ui.horizontal(|ui| {
@@ -286,5 +301,147 @@ impl eframe::App for App {
                 });
             });
         });
+    }
+}
+
+////////////////////////////////////////////////////
+// ここから受信側のアプリ
+
+pub struct KitchenApp {
+    entries: Vec<Entry>,
+    rx: Receiver<tcp_connection::Event>,
+    error: Option<String>,
+    csv_error: Option<String>,
+    sound: Option<notification::Notification>,
+    sound_on: bool,
+}
+
+impl KitchenApp {
+    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        visual::setup_fonts(&cc.egui_ctx);
+        visual::setup_style(&cc.egui_ctx);
+        let (tx, rx) = channel();
+        tcp_connection::start_listener(tx, cc.egui_ctx.clone());
+        Self {
+            entries: csv_utils::load_csv(),
+            rx,
+            error: None,
+            csv_error: None,
+            sound: notification::Notification::new(),
+            sound_on: true,
+        }
+    }
+
+    /// 未保存の注文をまとめてCSVに追記する（失敗しても次の受信時に再試行）
+    fn flush_unsaved(&mut self) {
+        let rows: Vec<Row> = self
+            .entries
+            .iter()
+            .filter(|e| !e.saved)
+            .map(|e| e.to_row())
+            .collect();
+        if rows.is_empty() {
+            return;
+        }
+        match csv_utils::append_csv(&rows) {
+            Ok(()) => {
+                for e in self.entries.iter_mut() {
+                    e.saved = true;
+                }
+                self.csv_error = None;
+            }
+            Err(e) => self.csv_error = Some(e),
+        }
+    }
+}
+
+impl eframe::App for KitchenApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // 受信イベントの処理
+        let mut received = false;
+        while let Ok(ev) = self.rx.try_recv() {
+            match ev {
+                tcp_connection::Event::Order(msg) => {
+                    self.entries.push(to_entry(msg));
+                    received = true;
+                }
+                tcp_connection::Event::Error(e) => self.error = Some(e),
+            }
+        }
+        if received {
+            self.flush_unsaved();
+            if self.sound_on {
+                if let Some(s) = &self.sound {
+                    s.chime();
+                }
+            }
+        }
+
+        // 調理待ちの集計
+        let pending: Vec<&Entry> = self.entries.iter().filter(|e| !e.done).collect();
+        let pending_count = pending.len();
+        let pending_tako: u32 = pending.iter().map(|e| e.tako).sum();
+        let pending_castella: u32 = pending.iter().map(|e| e.castella).sum();
+        let done_count = self.entries.len() - pending_count;
+
+        // 上: 状態表示
+        egui::TopBottomPanel::top("top").show(ctx, |ui| {
+            ui.heading("📥 注文受信");
+            ui.horizontal_wrapped(|ui| {
+                ui.label(format!("調理待ち {} 件", pending_count));
+                ui.label(format!("たこやき {} 個", pending_tako));
+                ui.label(format!("ベビーカステラ {} 個", pending_castella));
+                ui.checkbox(&mut self.sound_on, "🔔 通知音");
+            });
+            ui.label(
+                egui::RichText::new(format!("待ち受け: {:?}　保存先: {}", tcp_connection::SERVER_ADDR, csv_utils::CSV_PATH))
+                    .small(),
+            );
+            if self.sound.is_none() {
+                ui.colored_label(egui::Color32::GRAY, "音声デバイスが見つからないため、通知音は鳴りません");
+            }
+            if let Some(e) = &self.error {
+                ui.colored_label(egui::Color32::RED, e);
+            }
+            if let Some(e) = &self.csv_error {
+                ui.colored_label(egui::Color32::RED, format!("⚠ 未保存の注文があります: {e}"));
+            }
+        });
+
+        // 注文リスト
+        let mut toggle: Option<usize> = None;
+        egui::CentralPanel::default().show(ctx, |ui| {
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                // 調理待ち（古い順）
+                ui.heading("🔥 調理待ち");
+                if pending_count == 0 {
+                    ui.label("調理待ちの注文はありません");
+                }
+                for (idx, e) in self.entries.iter().enumerate().filter(|(_, e)| !e.done) {
+                    if ui_widgets::entry_card(ui, e, false) {
+                        toggle = Some(idx);
+                    }
+                }
+
+                ui.add_space(16.0);
+                ui.separator();
+
+                // 調理済み（新しい順）
+                egui::CollapsingHeader::new(
+                    egui::RichText::new(format!("✅ 調理済み（{} 件）", done_count)).size(26.0),
+                )
+                .default_open(false)
+                .show(ui, |ui| {
+                    for (idx, e) in self.entries.iter().enumerate().rev().filter(|(_, e)| e.done) {
+                        if ui_widgets::entry_card(ui, e, true) {
+                            toggle = Some(idx);
+                        }
+                    }
+                });
+            });
+        });
+        if let Some(i) = toggle {
+            self.entries[i].done = !self.entries[i].done;
+        }
     }
 }
