@@ -21,9 +21,9 @@ pub fn qty_stepper(ui: &mut egui::Ui, qty: &mut u32, unit: &str) {
 
 pub fn toggle_button(ui: &mut egui::Ui, on: &mut bool, text: &str) {
     let (fill, text_color) = if *on {
-        (egui::Color32::from_rgb(100, 225, 0), egui::Color32::BLACK)
+        (egui::Color32::from_rgb(225, 100, 0), egui::Color32::WHITE)
     } else {
-        (egui::Color32::from_gray(225), egui::Color32::BLACK)
+        (egui::Color32::from_gray(225), egui::Color32::WHITE)
     };
     let label = if *on { format!("✓ {text}") } else { text.to_owned() };
     let button = egui::Button::new(egui::RichText::new(label).color(text_color))

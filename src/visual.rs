@@ -6,7 +6,7 @@ pub fn setup_style(ctx: &egui::Context) {
         let v = &mut style.visuals;
         *v = egui::Visuals::dark(); // ライトテーマ（標準はダーク）
 
-        v.panel_fill = egui::Color32::from_rgb(255, 255, 230); // パネルの背景
+        v.panel_fill = egui::Color32::from_rgb(255, 255, 200); // パネルの背景
         v.window_fill = egui::Color32::from_rgb(0, 248, 0);
 
         // チェック系の見た目設定
@@ -14,9 +14,9 @@ pub fn setup_style(ctx: &egui::Context) {
         v.selection.stroke = egui::Stroke::new(2.0_f32, egui::Color32::WHITE); // ✓ マークの色
 
         // ボタンの見た目設定
-        v.widgets.inactive.weak_bg_fill = egui::Color32::from_rgb(100, 225, 0); // ボタンの通常色
-        v.widgets.hovered.weak_bg_fill = egui::Color32::from_rgb(50, 120, 0); // 乗せたとき
-        v.widgets.active.weak_bg_fill = egui::Color32::from_rgb(50, 120, 0); // 押している間
+        v.widgets.inactive.weak_bg_fill = egui::Color32::from_rgb(225, 120, 0); // ボタンの通常色
+        v.widgets.hovered.weak_bg_fill = egui::Color32::from_rgb(120, 50, 0); // 乗せたとき
+        v.widgets.active.weak_bg_fill = egui::Color32::from_rgb(120, 50, 0); // 押している間
 
         // テキストの色
         v.override_text_color = Some(egui::Color32::from_rgb(0, 0, 0)); // 文字色

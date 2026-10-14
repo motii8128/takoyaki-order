@@ -135,10 +135,12 @@ impl eframe::App for App {
                                     item.subtotal()
                                 ));
                             });
+
                             let trash = egui::Button::new(
                                 egui::RichText::new("🗑").color(egui::Color32::WHITE),
                             )
                             .fill(egui::Color32::from_rgb(200, 40, 40));
+                            ui.add_space(200.0);
                             if ui.add_enabled(!sending, trash).clicked() {
                                 remove = Some(i);
                             }
@@ -198,7 +200,7 @@ impl eframe::App for App {
                     ui.label("個数　　　");
                     ui.add_space(32.0);
                     for s in Size::ALL {
-                        ui.radio_value(&mut self.t_size, s, format!("{}個 ({}円)", s.count(), s.price()));
+                        ui.radio_value(&mut self.t_size, s, format!("{}個 ({}円)", 6, s.price()));
                     }
                 });
                 ui.horizontal(|ui| {
@@ -207,7 +209,7 @@ impl eframe::App for App {
                     for s in Sauce::ALL {
                         let text = if s == self.t_sauce
                         {
-                            egui::RichText::new(s.label()).color(egui::Color32::from_rgb(100, 225, 0))
+                            egui::RichText::new(s.label()).color(egui::Color32::from_rgb(225, 100, 0))
                         }
                         else {
                             egui::RichText::new(s.label()).color(egui::Color32::BLACK)
@@ -255,14 +257,13 @@ impl eframe::App for App {
                     ui.label("個数　　　");
                     ui.add_space(32.0);
                     for s in Size::ALL {
-                        ui.radio_value(&mut self.c_size, s, format!("{}個 ({}円)", s.count(), s.price()));
+                        ui.radio_value(&mut self.c_size, s, format!("{}個 ({}円)", s.count(), 200));
                     }
                 });
-                // ui.horizontal(|ui| {
-                //     ui.label("トッピング");
-                //     ui.checkbox(&mut self.c_choco, "チョコソース");
-                //     ui.checkbox(&mut self.c_honey, "はちみつ");
-                // });
+                ui.horizontal(|ui| {
+                    ui.label("トッピング");
+                    ui_widgets::toggle_button(ui, &mut self.c_choco, "砂糖");
+                });
                 ui.horizontal(|ui| {
                     ui_widgets::qty_stepper(ui, &mut self.c_qty, "個");
                     ui.add_space(20.0);

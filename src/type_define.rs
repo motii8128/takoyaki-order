@@ -1,4 +1,4 @@
-const TAKOYAKI_VALUE : u32 = 250;
+const TAKOYAKI_VALUE : u32 = 400;
 const KASUTERA_VALUE : u32 = 200;
 
 /// たこやきの注文数を選ぶ
@@ -93,7 +93,7 @@ impl CartItem {
             CartItem::Castella { size, choco, honey, .. } => {
                 let mut s = format!("ベビーカステラ {}個", size.count());
                 if *choco {
-                    s += " / チョコソース";
+                    s += " / 砂糖";
                 }
                 if *honey {
                     s += " / はちみつ";
