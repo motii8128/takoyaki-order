@@ -1,6 +1,6 @@
 use eframe::egui;
 
-use takoyaki_order::App;
+use takoyaki_order::OrderApp;
 
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
@@ -10,6 +10,6 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "takoyaki-order",
         options,
-        Box::new(|cc| Ok(Box::new(App::new(cc)))),
+        Box::new(|cc| Ok(Box::new(OrderApp::new(cc)))),
     )
 }
