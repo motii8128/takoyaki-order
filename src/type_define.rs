@@ -140,7 +140,7 @@ fn to_msg(cart_item : &CartItem) -> ItemMsg {
         CartItem::Castella { size, choco, honey, qty } => {
             let mut toppings = vec![];
             if *choco {
-                toppings.push("チョコソース".to_owned());
+                toppings.push("砂糖".to_owned());
             }
             if *honey {
                 toppings.push("はちみつ".to_owned());
@@ -218,7 +218,7 @@ pub fn detail_text(it: &ItemMsg) -> String {
     if !it.toppings.is_empty() {
         s += &format!(" / {}", it.toppings.join("・"));
     }
-    s + &format!("  × {}  ({}円)", it.qty, it.subtotal)
+    s + &format!("  × {}  ", it.qty)
 }
 
 pub fn to_entry(msg: OrderMsg) -> Entry {
@@ -226,10 +226,10 @@ pub fn to_entry(msg: OrderMsg) -> Entry {
     let mut castella = 0;
     let mut details = vec![];
     for it in &msg.items {
-        let pieces = it.pieces * it.qty;
+        // let pieces = it.pieces * it.qty;
         match it.name.as_str() {
-            "たこやき" => tako += pieces,
-            "ベビーカステラ" => castella += pieces,
+            "たこやき" => tako += it.qty,
+            "ベビーカステラ" => castella += it.qty,
             _ => {}
         }
         details.push(detail_text(it));

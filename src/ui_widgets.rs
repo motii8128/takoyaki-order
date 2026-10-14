@@ -50,16 +50,16 @@ pub fn entry_card(ui: &mut egui::Ui, e: &Entry, done: bool) -> bool {
             title += "  ⚠未保存";
         }
         let color = if done {
-            ui.visuals().weak_text_color()
+            egui::Color32::BLACK
         } else {
-            ui.visuals().strong_text_color()
+            egui::Color32::BLACK
         };
         ui.label(egui::RichText::new(title).strong().size(26.0).color(color));
 
-        ui.label(format!(
-            "たこやき {} 個 / ベビーカステラ {} 個",
-            e.tako, e.castella
-        ));
+        // ui.label(format!(
+        //     "たこやき {} 個 / ベビーカステラ {} 個",
+        //     e.tako, e.castella
+        // ));
         for d in &e.details {
             ui.label(d);
         }

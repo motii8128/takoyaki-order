@@ -1,4 +1,4 @@
-pub const SERVER_ADDR : [u8; 4] = [192, 168, 11, 4];
+pub const SERVER_ADDR : [u8; 4] = [127, 0, 0, 1];
 pub const SERVER_PORT : u16 = 64201;
 
 use std::io::{Write, BufReader, BufRead};

@@ -194,7 +194,7 @@ impl eframe::App for OrderApp {
                 Status::Done(no) => {
                     ui.colored_label(
                         egui::Color32::from_rgb(0, 150, 0),
-                        format!("注文番号 {} を送信しました！", no),
+                        format!("注文番号 {} を送信しました！\n受取口へ進んでください", no),
                     );
                 }
                 Status::Failed(e) => {

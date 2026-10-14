@@ -8,7 +8,7 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native(
-        "takoyaki-order",
+        "Order",
         options,
         Box::new(|cc| Ok(Box::new(OrderApp::new(cc)))),
     )
