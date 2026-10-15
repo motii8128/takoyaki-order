@@ -44,7 +44,7 @@ pub fn setup_fonts(ctx: &egui::Context) {
         "C:\\Windows\\Fonts\\meiryo.ttc",
         "C:\\Windows\\Fonts\\YuGothR.ttc",
         "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
-        "/home/motii/Downloads/minn_tyou_tai/ipam.ttc"
+        "./font/ipam.ttc"
         // "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
         // "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
     ];
