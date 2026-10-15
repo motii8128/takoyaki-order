@@ -82,8 +82,8 @@ impl CartItem {
 
     pub fn describe(&self) -> String {
         match self {
-            CartItem::Takoyaki { size, sauce, aonori, katsuobushi, .. } => {
-                let mut s = format!("たこやき {}個 / {}", size.count(), sauce.label());
+            CartItem::Takoyaki { sauce, aonori, katsuobushi, .. } => {
+                let mut s = format!("たこやき {}個 / {}", 6, sauce.label());
                 if *aonori {
                     s += " / 青のり";
                 }
@@ -211,7 +211,14 @@ impl Entry {
 }
 
 pub fn detail_text(it: &ItemMsg) -> String {
-    let mut s = format!("{} {}個", it.name, it.pieces);
+    let p = if it.name == "たこやき"
+    {
+        6
+    }
+    else {
+        4
+    };
+    let mut s = format!("{} {}個", it.name, p);
     if let Some(sauce) = &it.sauce {
         s += &format!(" / {sauce}");
     }
